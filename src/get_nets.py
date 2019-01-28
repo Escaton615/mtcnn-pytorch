@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from collections import OrderedDict
 import numpy as np
 
+WEIGHT_PATH = '/home/dt6/pytorchmodules/mtcnn_pytorch/src/weights'
 
 class Flatten(nn.Module):
 
@@ -52,7 +53,7 @@ class PNet(nn.Module):
         self.conv4_1 = nn.Conv2d(32, 2, 1, 1)
         self.conv4_2 = nn.Conv2d(32, 4, 1, 1)
 
-        weights = np.load('src/weights/pnet.npy')[()]
+        weights = np.load(f"{WEIGHT_PATH}/pnet.npy")[()]
         for n, p in self.named_parameters():
             p.data = torch.FloatTensor(weights[n])
 
@@ -97,7 +98,7 @@ class RNet(nn.Module):
         self.conv5_1 = nn.Linear(128, 2)
         self.conv5_2 = nn.Linear(128, 4)
 
-        weights = np.load('src/weights/rnet.npy')[()]
+        weights = np.load(f'{WEIGHT_PATH}/rnet.npy')[()]
         for n, p in self.named_parameters():
             p.data = torch.FloatTensor(weights[n])
 
@@ -148,7 +149,7 @@ class ONet(nn.Module):
         self.conv6_2 = nn.Linear(256, 4)
         self.conv6_3 = nn.Linear(256, 10)
 
-        weights = np.load('src/weights/onet.npy')[()]
+        weights = np.load(f'{WEIGHT_PATH}/onet.npy')[()]
         for n, p in self.named_parameters():
             p.data = torch.FloatTensor(weights[n])
 
