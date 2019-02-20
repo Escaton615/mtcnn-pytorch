@@ -9,7 +9,7 @@ from .first_stage import run_first_stage
 def detect_faces(image,
                  pnet, onet, rnet,
                  min_face_size=20.0,
-                 thresholds=[0.6, 0.7, 0.8],
+                 thresholds=[0.6, 0.7, 0.95],
                  nms_thresholds=[0.7, 0.7, 0.7]
                  ):
     """
