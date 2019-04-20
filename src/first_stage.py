@@ -3,8 +3,9 @@ from torch.autograd import Variable
 import math
 from PIL import Image
 import numpy as np
-from .box_utils import nms, _preprocess
+from .box_utils import nms, _preprocess_tensor
 
+from torchvision import transforms as T
 
 def run_first_stage(image, net, scale, threshold):
     """Run P-Net, generate bounding boxes, and do NMS.
@@ -27,13 +28,17 @@ def run_first_stage(image, net, scale, threshold):
     width, height = image.size
     sw, sh = math.ceil(width*scale), math.ceil(height*scale)
     img = image.resize((sw, sh), Image.BILINEAR)
-    img = np.asarray(img, 'float32')
+    # img = np.asarray(img, 'float32')
+    img = T.ToTensor()(img).to('cuda').half()
 
-    img = torch.FloatTensor(_preprocess(img))
+    img = _preprocess_tensor(img)
     img.requires_grad=False
-    output = net(img)
-    probs = output[1].data.numpy()[0, 1, :, :]
-    offsets = output[0].data.numpy()
+    with torch.no_grad():
+        output = net(img)
+    probs = output[1].data.cpu().numpy().astype(np.float)[0, 1, :, :]
+    offsets = output[0].data.cpu().numpy().astype(np.float)
+
+    # print(offsets.dtype)
     # probs: probability of a face at each sliding window
     # offsets: transformations to true bounding boxes
 

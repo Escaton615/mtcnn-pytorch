@@ -2,9 +2,11 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 from .get_nets import PNet, RNet, ONet
-from .box_utils import nms, calibrate_box, get_image_boxes, convert_to_square
+from .box_utils import nms, calibrate_box, get_image_boxes_tensor, convert_to_square
 from .first_stage import run_first_stage
 
+import time
+from torchvision import transforms as T
 
 def detect_faces(image,
                  pnet, onet, rnet,
@@ -29,6 +31,8 @@ def detect_faces(image,
     # rnet = RNet()
     # onet = ONet()
     # onet.eval()
+
+    start = time.time()
 
     # BUILD AN IMAGE PYRAMID
     width, height = image.size
@@ -79,13 +83,30 @@ def detect_faces(image,
     bounding_boxes = convert_to_square(bounding_boxes)
     bounding_boxes[:, 0:4] = np.round(bounding_boxes[:, 0:4])
 
+    end = time.time()
+    print("stage 1 cost", end - start)
+    start = end
+
     # STAGE 2
 
-    img_boxes = get_image_boxes(bounding_boxes, image, size=24)
-    img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
+    img = T.ToTensor()(image).to('cuda').half()
+    img_boxes = get_image_boxes_tensor(bounding_boxes, img, size=24)
+    # img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
+
+    end = time.time()
+    print("stage 2 get image boxes cost", end - start)
+    start = end
+
+    # img_boxes = torch.HalfTensor(img_boxes).to('cuda')
+
     output = rnet(img_boxes)
-    offsets = output[0].data.numpy()  # shape [n_boxes, 4]
-    probs = output[1].data.numpy()  # shape [n_boxes, 2]
+
+    end = time.time()
+    print("stage 2 rnet cost", end - start)
+    start = end
+
+    offsets = output[0].data.cpu().numpy()  # shape [n_boxes, 4]
+    probs = output[1].data.cpu().numpy()  # shape [n_boxes, 2]
 
     keep = np.where(probs[:, 1] > thresholds[1])[0]
     bounding_boxes = bounding_boxes[keep]
@@ -98,16 +119,20 @@ def detect_faces(image,
     bounding_boxes = convert_to_square(bounding_boxes)
     bounding_boxes[:, 0:4] = np.round(bounding_boxes[:, 0:4])
 
+    end = time.time()
+    print("stage 2 cost", end - start)
+    start = end
+
     # STAGE 3
 
-    img_boxes = get_image_boxes(bounding_boxes, image, size=48)
+    img_boxes = get_image_boxes_tensor(bounding_boxes, img, size=48)
     if len(img_boxes) == 0: 
         return [], []
-    img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
+    # img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
     output = onet(img_boxes)
-    landmarks = output[0].data.numpy()  # shape [n_boxes, 10]
-    offsets = output[1].data.numpy()  # shape [n_boxes, 4]
-    probs = output[2].data.numpy()  # shape [n_boxes, 2]
+    landmarks = output[0].data.cpu().numpy()  # shape [n_boxes, 10]
+    offsets = output[1].data.cpu().numpy()  # shape [n_boxes, 4]
+    probs = output[2].data.cpu().numpy()  # shape [n_boxes, 2]
 
     keep = np.where(probs[:, 1] > thresholds[2])[0]
     bounding_boxes = bounding_boxes[keep]
@@ -126,5 +151,8 @@ def detect_faces(image,
     keep = nms(bounding_boxes, nms_thresholds[2], mode='min')
     bounding_boxes = bounding_boxes[keep]
     landmarks = landmarks[keep]
+
+    end = time.time()
+    print("stage 3 cost", end - start)
 
     return bounding_boxes, landmarks
