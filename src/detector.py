@@ -130,9 +130,9 @@ def detect_faces(image,
         return [], []
     # img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
     output = onet(img_boxes)
-    landmarks = output[0].data.cpu().numpy()  # shape [n_boxes, 10]
-    offsets = output[1].data.cpu().numpy()  # shape [n_boxes, 4]
-    probs = output[2].data.cpu().numpy()  # shape [n_boxes, 2]
+    landmarks = output[0].data.float().cpu().numpy()  # shape [n_boxes, 10]
+    offsets = output[1].data.float().cpu().numpy()  # shape [n_boxes, 4]
+    probs = output[2].data.float().cpu().numpy()  # shape [n_boxes, 2]
 
     keep = np.where(probs[:, 1] > thresholds[2])[0]
     bounding_boxes = bounding_boxes[keep]
