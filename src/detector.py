@@ -2,9 +2,11 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 from .get_nets import PNet, RNet, ONet
-from .box_utils import nms, calibrate_box, get_image_boxes, convert_to_square
+from .box_utils import nms, calibrate_box, get_image_boxes_tensor, convert_to_square
 from .first_stage import run_first_stage
 
+import time
+from torchvision import transforms as T
 
 def detect_faces(image,
                  pnet, onet, rnet,
@@ -81,11 +83,11 @@ def detect_faces(image,
 
     # STAGE 2
 
-    img_boxes = get_image_boxes(bounding_boxes, image, size=24)
-    img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
+    img = T.ToTensor()(image).to('cuda').half()
+    img_boxes = get_image_boxes_tensor(bounding_boxes, img, size=24)
     output = rnet(img_boxes)
-    offsets = output[0].data.numpy()  # shape [n_boxes, 4]
-    probs = output[1].data.numpy()  # shape [n_boxes, 2]
+    offsets = output[0].data.float().cpu().numpy()  # shape [n_boxes, 4]
+    probs = output[1].data.float().cpu().numpy()  # shape [n_boxes, 2]
 
     keep = np.where(probs[:, 1] > thresholds[1])[0]
     bounding_boxes = bounding_boxes[keep]
@@ -100,14 +102,14 @@ def detect_faces(image,
 
     # STAGE 3
 
-    img_boxes = get_image_boxes(bounding_boxes, image, size=48)
+    img_boxes = get_image_boxes_tensor(bounding_boxes, img, size=48)
     if len(img_boxes) == 0: 
         return [], []
-    img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
+    # img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
     output = onet(img_boxes)
-    landmarks = output[0].data.numpy()  # shape [n_boxes, 10]
-    offsets = output[1].data.numpy()  # shape [n_boxes, 4]
-    probs = output[2].data.numpy()  # shape [n_boxes, 2]
+    landmarks = output[0].data.float().cpu().numpy()  # shape [n_boxes, 10]
+    offsets = output[1].data.float().cpu().numpy()  # shape [n_boxes, 4]
+    probs = output[2].data.float().cpu().numpy()  # shape [n_boxes, 2]
 
     keep = np.where(probs[:, 1] > thresholds[2])[0]
     bounding_boxes = bounding_boxes[keep]

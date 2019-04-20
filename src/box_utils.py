@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 
+import torch.nn.functional as F
 
 def nms(boxes, overlap_threshold=0.5, mode='union'):
     """Non-maximum suppression.
@@ -159,6 +160,43 @@ def get_image_boxes(bounding_boxes, img, size=24):
     return img_boxes
 
 
+def get_image_boxes_tensor(bounding_boxes, img, size=24):
+    """Cut out boxes from the image.
+
+    Arguments:
+        bounding_boxes: a float numpy array of shape [n, 5].
+        img: an instance of PIL.Image.
+        size: an integer, size of cutouts.
+
+    Returns:
+        a float numpy array of shape [n, 3, size, size].
+    """
+
+    num_boxes = len(bounding_boxes)
+    _, height, width = img.shape
+
+    [dy, edy, dx, edx, y, ey, x, ex, w, h] = correct_bboxes(bounding_boxes, width, height)
+    # img_boxes = np.zeros((num_boxes, 3, size, size), 'float32')
+
+    img_boxes = img.new_zeros(num_boxes, 3, size, size)
+
+    for i in range(num_boxes):
+        img_box = img.new_zeros(3, h[i], w[i])
+        # print("box shape", img_box.shape, dy[i], edy[i], dx[i], edx[i], y[i], ey[i], x[i], ex[i])
+
+        edy[i] = edy[i] if edy[i] > 0 else h[i] + edy[i]
+        edx[i] = edx[i] if edx[i] > 0 else w[i] + edx[i]
+
+        img_box[:, dy[i]:(edy[i] + 1), dx[i]:(edx[i] + 1)] =\
+            img[:, y[i]:(ey[i] + 1), x[i]:(ex[i] + 1)]
+
+        # resize
+        img_box = F.interpolate(img_box.unsqueeze(0), (size, size), mode='bilinear', align_corners=False).squeeze(0)
+
+        img_boxes[i, :, :, :] = _preprocess_tensor(img_box)
+
+    return img_boxes
+
 def correct_bboxes(bboxes, width, height):
     """Crop boxes that are too big and get coordinates
     with respect to cutouts.
@@ -235,4 +273,22 @@ def _preprocess(img):
     img = img.transpose((2, 0, 1))
     img = np.expand_dims(img, 0)
     img = (img - 127.5)*0.0078125
+    return img
+
+
+def _preprocess_tensor(t):
+    """Preprocessing step before feeding the network.
+
+    Arguments:
+        img: a float numpy array of shape [h, w, c].
+
+    Returns:
+        a float numpy array of shape [1, c, h, w].
+    """
+    # img = img.transpose((2, 0, 1))
+    # img = np.expand_dims(img, 0)
+    # img = (img - 127.5)*0.0078125
+
+    img = t.unsqueeze(0) - 0.5 / 0.5
+
     return img
