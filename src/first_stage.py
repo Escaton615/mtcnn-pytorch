@@ -6,6 +6,48 @@ import numpy as np
 from .box_utils import nms, _preprocess_tensor
 
 from torchvision import transforms as T
+import time
+
+def run_first_stage_tensor(img, net, scale, threshold):
+    """Run P-Net, generate bounding boxes, and do NMS.
+
+    Arguments:
+        image: an instance of PIL.Image.
+        net: an instance of pytorch's nn.Module, P-Net.
+        scale: a float number,
+            scale width and height of the image by this number.
+        threshold: a float number,
+            threshold on the probability of a face when generating
+            bounding boxes from predictions of the net.
+
+    Returns:
+        a float numpy array of shape [n_boxes, 9],
+            bounding boxes with scores and offsets (4 + 1 + 4).
+    """
+
+    # scale the image and convert it to a float array
+
+    img = _preprocess_tensor(img)
+    # img.requires_grad=False
+    # with torch.no_grad():
+    output = net(img)
+
+    # start_time = time.time()
+    probs = output[1].data.cpu().numpy().astype(np.float)[0, 1, :, :]
+    offsets = output[0].data.cpu().numpy().astype(np.float)
+    # print("probs to cpu cost", time.time() - start_time)
+    # print(offsets.dtype)
+    # probs: probability of a face at each sliding window
+    # offsets: transformations to true bounding boxes
+
+
+    boxes = _generate_bboxes(probs, offsets, scale, threshold)
+
+    if len(boxes) == 0:
+        return None
+
+    keep = nms(boxes[:, 0:5], overlap_threshold=0.5)
+    return boxes[keep]
 
 def run_first_stage(image, net, scale, threshold):
     """Run P-Net, generate bounding boxes, and do NMS.
