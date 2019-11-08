@@ -27,7 +27,7 @@ class Flatten(nn.Module):
 
 class PNet(nn.Module):
 
-    def __init__(self, weights):
+    def __init__(self):
 
         super(PNet, self).__init__()
 
@@ -54,8 +54,8 @@ class PNet(nn.Module):
         self.conv4_2 = nn.Conv2d(32, 4, 1, 1)
 
         # weights = np.load(f"{WEIGHT_PATH}/pnet.npy")[()]
-        for n, p in self.named_parameters():
-            p.data = torch.FloatTensor(weights[n])
+        # for n, p in self.named_parameters():
+        #     p.data = torch.FloatTensor(weights[n])
 
     def forward(self, x):
         """
@@ -74,7 +74,7 @@ class PNet(nn.Module):
 
 class RNet(nn.Module):
 
-    def __init__(self, weights):
+    def __init__(self):
 
         super(RNet, self).__init__()
 
@@ -99,8 +99,8 @@ class RNet(nn.Module):
         self.conv5_2 = nn.Linear(128, 4)
 
 
-        for n, p in self.named_parameters():
-            p.data = torch.FloatTensor(weights[n])
+        # for n, p in self.named_parameters():
+        #     p.data = torch.FloatTensor(weights[n])
 
     def forward(self, x):
         """
@@ -119,7 +119,7 @@ class RNet(nn.Module):
 
 class ONet(nn.Module):
 
-    def __init__(self, weights):
+    def __init__(self):
 
         super(ONet, self).__init__()
 
@@ -150,8 +150,8 @@ class ONet(nn.Module):
         self.conv6_3 = nn.Linear(256, 10)
 
         # weights = np.load(f'{WEIGHT_PATH}/onet.npy')[()]
-        for n, p in self.named_parameters():
-            p.data = torch.FloatTensor(weights[n])
+        # for n, p in self.named_parameters():
+        #     p.data = torch.FloatTensor(weights[n])
 
     def forward(self, x):
         """
