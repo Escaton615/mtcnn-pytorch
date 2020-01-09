@@ -289,6 +289,6 @@ def _preprocess_tensor(t):
     # img = np.expand_dims(img, 0)
     # img = (img - 127.5)*0.0078125
 
-    img = t.unsqueeze(0) - 0.5 / 0.5
+    img = (t.unsqueeze(0) - 0.5) / 0.5
 
     return img
